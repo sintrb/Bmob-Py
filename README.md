@@ -2,7 +2,7 @@
 A Simple Bmob SDK With Python.
 
 DEMO
-```
+```python
 from Bmob import BmobSDK, BmobModel
 
 # define a Model
