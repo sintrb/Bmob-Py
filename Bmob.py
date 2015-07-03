@@ -212,7 +212,7 @@ if __name__ == '__main__':
 		name = ''	# string
 		score = 1.0	# number
 
-	# setuo BmobSDK
+	# setup BmobSDK
 	BmobSDK.setup('77b5dad35e17a087d679e62db9936950', 'a9ab631355ce61f19be22f55a0b1b422')
 
 	# create a course and save it
