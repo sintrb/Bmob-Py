@@ -136,6 +136,12 @@ class Query(object):
 		for r in json.loads(self.context.http.open_html('/'.join([self.context.apiurl, self.clz.__name__, '?'+self.get_urlencode()])))['results']:
 			rs.append(self.clz(**r))
 		self.items = rs
+		return self.items
+	def first(self):
+		q = self.copy()
+		q.limit(1)
+		rs = q.exec_query()
+		return len(rs) and rs[0] or None
 
 	def __getslice__(self, s, e):
 		if self.items == None:
@@ -181,7 +187,9 @@ class BmobModel(object):
 	def get_dict(self):
 		ks = self.get_attrs()
 		clz = type(self)
-		return dict([(k,type(getattr(clz, k))(getattr(self, k))) for k in ks])
+		dic = {}
+		tps = [type(v) for v in [1,1L,1.0,'1',(1,2),[1,2],{'1':'1'},{1,2}]]
+		return dict([(k,type(getattr(clz, k))(getattr(self, k))) for k in ks if type(getattr(clz, k)) in tps])
 	def get_modelname(self):
 		return type(self).__name__
 	def save(self):
