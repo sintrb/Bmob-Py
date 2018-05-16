@@ -3,47 +3,49 @@
 from Bmob import BmobSDK, BmobModel
 
 
-APP_ID = "77b5dad35e17a087d679e62db9936950"
-REST_API_KEY = "a9ab631355ce61f19be22f55a0b1b422"
+APP_ID = "3a3e06755ae2a0cc58ccc4747d9b7132"
+REST_API_KEY = "b39628bf1e527ffb98527d471d314277"
 
 
-class Course(BmobModel):
+class Page(BmobModel):
 
-    name = ''
-    score = 1.0
+    page_id = ''
+    article = {}
+    tags = []
 
 
 if __name__ == '__main__':
     # setup SDK
-    Bmob.setup(APP_ID, REST_API_KEY)
+    BmobSDK.setup(APP_ID, REST_API_KEY)
 
     # Construct a Course instance and save it into bmob data service
-    c1 = Course(name='xxx',score=4)
+    c1 = Page(page_id='123',article={"id":"hello","content":"shabi"}, tags=['cifa'])
     c1.save()
     
-    c2 = Course('957638ab1e')
-    print("{0}:{1}".format(c2.name, c2.score))
-    c2.age = c2.age + 1
+    c2 = Page('5269096a66')
+    print("{0}:{1}".format(c2.page_id, c2.article['content']))
+    c2.content = "updated"
     c2.save()
 
 
-    print("The number of users: {0}".format(User().query().count()))
-    for c in Course().query().w_regex('name', 'Program').orde("-createdAt").limit(20):
-        print("%s,%s,%s" % (c.createAt, c.name, c.score))
+    print("The number of pages: {0}".format(Page().query().count()))
+    for c in Page().query().w_in('tags', ['cifa']).order("-createdAt").limit(20):
+        print("%s,%s" % (c.createdAt, c.page_id))
+        print(c.tags)
+        print(c.article)
     
     # query like a list
-    q = Course().query().skip(5).limit(10)
+    q = Page().query().skip(5).limit(10)
     print("Items of q:")
     for c in q:
-        print("\t%s" %s q.objectId)
+        print("\t%s" % c.objectId)
     print("q.count(): %d" % q.count())
-    print(q[-1].name)
-    print(q[3:])
+    print(q[-1].page_id)
 
     # deleting operation
-    print("The number before deleting: %d" % len(Course().query()))
+    print("The number before deleting: %d" % len(Page().query()))
     c1.delete()
-    print("The number after deleting: %d" % len(Course().query()))
+    print("The number after deleting: %d" % len(Page().query()))
 
 
 
