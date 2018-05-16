@@ -19,29 +19,29 @@ c1.save()
 
 # get course of id '957638ab1e'
 c2 = Course('957638ab1e')
-print '%s : %s'%(c2.name, c2.score)
+print('%s : %s'%(c2.name, c2.score))
 c2.score = c2.score+1
 c2.save()
 
 # Query:
 # print the course count
-print 'count of courses : %d'%Course().query().count() # or Query(Course).count()
+print('count of courses : %d'%Course().query().count() # or Query(Course).count())
 
 # create a Course query and query all contain "Program" courses
 for c in Course().query().w_regex('name','Program').order("-createdAt").limit(20):
-	print '%s  %s : %s'%(c.createdAt, c.name, c.score)
+	print('%s  %s : %s'%(c.createdAt, c.name, c.score))
 
 # query like a list
 q = Course().query().skip(5).limit(10)
-print 'Items of q:'
+print('Items of q:')
 for c in q:
-	print '\t',c.objectId
-print "q.count() : %d"%q.count()
-print q[-1].name
-print q[3:]
+	print('\t',c.objectId)
+print("q.count() : %d"%q.count())
+print(q[-1].name)
+print(q[3:])
 
 # delete
-print 'count before delete: %d'%len(Course().query())
+print('count before delete: %d'%len(Course().query()))
 c1.delete()
-print 'count after delete: %d'%len(Course().query())
+print('count after delete: %d'%len(Course().query()))
 ```
