@@ -9,7 +9,25 @@ https://github.com/sintrb/Bmob-Py
 '''
 import json
 import copy
-from HttpHolder import HttpHolder, urlencode
+import functools
+import requests
+from urllib import parse
+
+def _urljoin(func):
+    @functools.wraps(func)
+    def _wrapper(self, resource_path, *args, **kwargs):
+        url = self.apiurl + '/' + resource_path
+        return func(self, url, *args, **kwargs)
+    return _wrapper
+
+
+def urlencode(params):
+    if isinstance(params, dict):
+        return parse.urlencode(params)
+    elif isinstance(params, list):
+        return parse.quote(''.join(params))
+    else:
+        return parse.quote(params)
 
 
 class BmobSDK(object):
@@ -23,12 +41,27 @@ class BmobSDK(object):
         self.appid = appid
         self.restkey = restkey
         self.apiurl = apiurl
-        self.http = HttpHolder(
-            headers={
-                "X-Bmob-Application-Id": appid,
-                "X-Bmob-REST-API-Key": restkey,
-                "Content-Type": "application/json"})
+        self._http_headers = {
+                "x-Bmob-Application-Id": self.appid,
+                "X-Bmob-REST-API-Key": self.restkey,
+                "Content-Type": "application/json"}
+    @_urljoin
+    def get(self, url):
+        return requests.get(url, headers=self._http_headers)
 
+    @_urljoin
+    def post(self, url, **kwargs):
+        return requests.post(url, json=kwargs.get('data'), headers=self._http_headers)
+
+    @_urljoin
+    def put(self, url, **kwargs):
+        return requests.put(url, json=kwargs.get('data'), headers=self._http_headers)
+
+    @_urljoin
+    def delete(self, url, **kwargs):
+        return requests.delete(url, headers=self._http_headers)
+
+    
     @staticmethod
     def setup(appid, restkey):
         BmobSDK.context = BmobSDK(appid, restkey)
@@ -82,8 +115,8 @@ class Query(object):
         else:
             self.limit(0)
             self.q['count'] = 1
-            return json.loads(self.context.http.open_html(
-                '/'.join([self.context.apiurl, self.clz.__name__, '?' + self.get_urlencode()])))['count']
+            path = '/'.join([self.clz.__name__, '?' + self.get_urlencode()])
+            return self.context.get(path).json()['count']
 
     def get_kw(self, k):
         if k in self.w:
@@ -93,74 +126,69 @@ class Query(object):
             return self.w[k]
 
     def w_eq(self, k, v):
-        '''less then'''
+        '''equal'''
         self.w[k] = v
         return self.copy()
 
     def w_lt(self, k, v):
-        '''less then'''
+        '''less than'''
         self.get_kw(k)['$lt'] = v
         return self.copy()
 
     def w_lte(self, k, v):
-        '''less then'''
+        '''less than or equal'''
         self.get_kw(k)['$lte'] = v
         return self.copy()
 
     def w_gt(self, k, v):
-        '''less then'''
+        '''greater than'''
         self.geet_kw(k)['$gt'] = v
         return self.copy()
 
-    def w_gt(self, k, v):
-        '''less then'''
+    def w_gte(self, k, v):
+        '''greater than or equal'''
         self.get_kw(k)['$gte'] = v
         return self.copy()
 
     def w_ne(self, k, v):
-        '''less then'''
+        '''not equal'''
         self.get_kw(k)['$ne'] = v
         return self.copy()
 
     def w_in(self, k, v):
-        '''less then'''
+        '''in'''
         self.get_kw(k)['$in'] = v
         return self.copy()
 
     def w_nin(self, k, v):
-        '''less then'''
+        '''not in'''
         self.get_kw(k)['$nin'] = v
         return self.copy()
 
     def w_exists(self, k, v):
-        '''less then'''
         self.get_kw(k)['$exists'] = v
         return self.copy()
 
     def w_select(self, k, v):
-        '''less then'''
         self.get_kw(k)['$select'] = v
         return self.copy()
 
     def w_dontSelect(self, k, v):
-        '''less then'''
         self.get_kw(k)['$dontSelect'] = v
         return self.copy()
 
     def w_all(self, k, v):
-        '''less then'''
         self.get_kw(k)['$all'] = v
         return self.copy()
 
     def w_regex(self, k, v):
-        '''less then'''
         self.get_kw(k)['$regex'] = v
         return self.copy()
 
     def exec_query(self):
         rs = []
-        for r in json.loads(self.context.http.open_html(
-                '/'.join([self.context.apiurl, self.clz.__name__, '?' + self.get_urlencode()])))['results']:
+        path = '/'.join([self.clz.__name__, '?' + self.get_urlencode()])
+        for r in self.context.get(path).json()['results']:
             rs.append(self.clz(**r))
         self.items = rs
         return self.items
@@ -210,8 +238,8 @@ class BmobModel(object):
         self.objectId = objectId
         if self.objectId:
             # get object by id
-            for k, v in json.loads(self.context.http.open_html(
-                    '/'.join([self.context.apiurl, self.get_modelname(), self.objectId]))).items():
+            path = '/'.join([self.get_modelname(), self.objectId])
+            for k, v in self.context.get(path).json().items():
                 setattr(self, k, v)
         else:
             for k, v in kwargs.items():
@@ -224,12 +252,7 @@ class BmobModel(object):
         ks = self.get_attrs()
         clz = type(self)
         dic = {}
-        tps = [
-            type(v) for v in [
-                1, 1, 1.0, '1', (1, 2), [
-                    1, 2], {
-                    '1': '1'}, {
-                    1, 2}]]
+        tps = [type(v) for v in [1, 1, 1.0, '1', (1, 2), [1, 2], {'1': '1'}, {1, 2}]]
         return dict([(k, type(getattr(clz, k))(getattr(self, k)))
                      for k in ks if type(getattr(clz, k)) in tps])
 
@@ -238,20 +261,20 @@ class BmobModel(object):
 
     def save(self):
         data = self.get_dict()
-        jdata = json.dumps(data)
+        #jdata = json.dumps(data)
         if self.objectId:
-            for k, v in json.loads(self.context.http.open_html(
-                    '/'.join([self.context.apiurl, self.get_modelname(), self.objectId]), data=jdata, method="PUT")).items():
+            path = '/'.join([self.get_modelname(), self.objectId])
+            for k, v in self.context.put(path, data=data).json().items():
                 setattr(self, k, v)
         else:
-            for k, v in json.loads(self.context.http.open_html(
-                    '/'.join([self.context.apiurl, self.get_modelname()]), data=jdata)).items():
+            path = self.get_modelname()
+            for k, v in self.context.post(path, data=data).json().items():
                 setattr(self, k, v)
 
     def delete(self):
         if self.objectId:
-            res = json.loads(self.context.http.open_html(
-                '/'.join([self.context.apiurl, self.get_modelname(), self.objectId]), method="DELETE"))['msg'] == 'ok'
+            path = '/'.join([self.get_modelname(), self.objectId])
+            res = self.context.delete(path).json()['msg'] == 'ok'
             if res:
                 self.objectId = None
             return res
